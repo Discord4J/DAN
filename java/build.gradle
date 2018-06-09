@@ -1,0 +1,15 @@
+apply plugin: "java-library"
+
+group "com.discord4j"
+version "0.1.0"
+
+sourceCompatibility = 1.8
+targetCompatibility = sourceCompatibility
+
+repositories.mavenCentral()
+dependencies.implementation "net.java.dev.jna:jna:4.5.1"
+
+task wrapper(type: Wrapper) {
+    gradleVersion = "4.8"
+    distributionUrl = "https://services.gradle.org/distributions/gradle-$gradleVersion-all.zip"
+}

@@ -1,0 +1,8 @@
+[package]
+name = "dan"
+version = "0.1.0"
+authors = ["danthonywalker <thedanthonywalker@gmail.com>"]
+
+[lib]
+name = "dan"
+crate-type = ["dylib"]

@@ -1,0 +1,10 @@
+# Gradle
+.gradle/
+
+# IntelliJ
+target/
+.idea/
+*.iml
+
+# Rust
+Cargo.lock
