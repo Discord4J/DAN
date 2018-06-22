@@ -16,7 +16,7 @@ use std::io;
 use std::io::{Error, ErrorKind};
 use std::net::{SocketAddr, UdpSocket};
 use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicUsize, Ordering::Relaxed};
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread::{sleep, yield_now};
 use std::time::{Duration, Instant};
@@ -59,27 +59,27 @@ impl DanReadSocket {
         let flags = &self.shared_socket.flags;
         let buffer = &self.read_buffer;
 
-        // Flag a thread is READING, and process until no longer to READ
-        while (flags.fetch_or(READING, Ordering::Relaxed) & READ) != 0 {
+        // Flag thread is READING, and loop until READ is unset
+        while (flags.fetch_or(READING, Relaxed) & READ) != 0 {
             let received = socket.recv_from(packet);
             if received.is_ok() {
 
                 let (size, address) = received.unwrap();
                 if (size != packet_size) || (address != received_address) {
-                    flags.fetch_and(!READING, Ordering::Relaxed);
+                    flags.fetch_and(!READING, Relaxed);
                     let error_message = format!("Unexpected Packet Size {} or Address {}
                     Expected {} and {}", size, address, packet_size, received_address);
                     return Err(Error::new(ErrorKind::Other, error_message));
                 }
 
                 buffer.send(packet.clone()).map_err(|error| {
-                    flags.fetch_and(!READING, Ordering::Relaxed);
+                    flags.fetch_and(!READING, Relaxed);
                     Error::new(ErrorKind::Other, error)
                 })?;
             }
         }
 
-        flags.fetch_and(!READING, Ordering::Relaxed);
+        flags.fetch_and(!READING, Relaxed);
         Ok(())
     }
 }
@@ -94,8 +94,8 @@ impl DanWriteSocket {
         let default = Duration::new(0, 0);
         let mut time = Instant::now();
 
-        // Flag a thread is WRITING, and process until no longer to WRITE
-        while (flags.fetch_or(WRITING, Ordering::Relaxed) & WRITE) != 0 {
+        // Flag thread is WRITING, and loop until WRITE is unset
+        while (flags.fetch_or(WRITING, Relaxed) & WRITE) != 0 {
 
             let packet = buffer.try_recv();
             if packet.is_ok() {
@@ -103,14 +103,14 @@ impl DanWriteSocket {
 
                 sleep(packet_time.checked_sub(Instant::now() - time).unwrap_or(default));
                 socket.send_to(&packet, send_address).map_err(|error| {
-                    flags.fetch_and(!WRITING, Ordering::Relaxed);
+                    flags.fetch_and(!WRITING, Relaxed);
                     error
                 })?;
                 time = Instant::now();
             }
         }
 
-        flags.fetch_and(!WRITING, Ordering::Relaxed);
+        flags.fetch_and(!WRITING, Relaxed);
         Ok(())
     }
 }
@@ -148,8 +148,8 @@ impl DanSocket {
 
     pub fn destroy(&self) {
         let flags = &self.shared_socket.flags;
-        while (flags.fetch_and(!(READ | WRITE), Ordering::Relaxed) & (READING | WRITING)) != 0 {
-            yield_now(); // Yields until READING/WRITING is disabled and also disable READ/WRITE
+        while (flags.fetch_and(!(READ | WRITE), Relaxed) & (READING | WRITING)) != 0 {
+            yield_now(); // Yields until READING/WRITING is unset and unset READ/WRITE
         }
     }
 
