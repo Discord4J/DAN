@@ -16,7 +16,7 @@ use std::io;
 use std::io::{Error, ErrorKind};
 use std::net::{SocketAddr, UdpSocket};
 use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering::Relaxed};
+use std::sync::atomic::{ATOMIC_USIZE_INIT, AtomicUsize, Ordering::Relaxed};
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread::{sleep, yield_now};
 use std::time::{Duration, Instant};
@@ -35,11 +35,13 @@ pub struct DanSharedSocket {
 pub struct DanReadSocket {
     shared_socket: Arc<DanSharedSocket>,
     read_buffer: Sender<Vec<u8>>,
+    received: AtomicUsize,
 }
 
 pub struct DanWriteSocket {
     shared_socket: Arc<DanSharedSocket>,
     write_buffer: Receiver<Vec<u8>>,
+    sent: AtomicUsize,
 }
 
 pub struct DanSocket {
@@ -76,11 +78,18 @@ impl DanReadSocket {
                     flags.fetch_and(!READING, Relaxed);
                     Error::new(ErrorKind::Other, error)
                 })?;
+
+                // Only accumulate if successful
+                self.received.fetch_add(1, Relaxed);
             }
         }
 
         flags.fetch_and(!READING, Relaxed);
         Ok(())
+    }
+
+    pub fn received(&self) -> usize {
+        self.received.load(Relaxed)
     }
 }
 
@@ -107,11 +116,18 @@ impl DanWriteSocket {
                     error
                 })?;
                 time = Instant::now();
+
+                // Only accumulate if successful
+                self.sent.fetch_add(1, Relaxed);
             }
         }
 
         flags.fetch_and(!WRITING, Relaxed);
         Ok(())
+    }
+
+    pub fn sent(&self) -> usize {
+        self.sent.load(Relaxed)
     }
 }
 
@@ -131,11 +147,13 @@ impl DanSocket {
         let flags = AtomicUsize::new(READ | WRITE);
         let socket = Arc::new(DanSharedSocket { socket, address: connection_address, flags });
 
+        let received = ATOMIC_USIZE_INIT;
         let (read_buffer, receiver) = channel();
-        let read_socket = DanReadSocket { shared_socket: socket.clone(), read_buffer };
+        let read_socket = DanReadSocket { shared_socket: socket.clone(), read_buffer, received };
 
+        let sent = ATOMIC_USIZE_INIT;
         let (sender, write_buffer) = channel();
-        let write_socket = DanWriteSocket { shared_socket: socket.clone(), write_buffer };
+        let write_socket = DanWriteSocket { shared_socket: socket.clone(), write_buffer, sent };
 
         Ok(DanSocket {
             shared_socket: socket,

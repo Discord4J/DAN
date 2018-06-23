@@ -97,6 +97,11 @@ pub unsafe extern "C" fn dan_read(
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn dan_received(dan: *const DanSocket) -> usize {
+    (&*dan).read_socket.received()
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn dan_writing(dan: *const DanSocket, packet_time: c_uint) -> bool {
     // Function may block until dan_destroy is invoked or an error writing occurs
     (&*dan).write_socket.write(Duration::new(0, packet_time)).is_ok()
@@ -111,4 +116,9 @@ pub unsafe extern "C" fn dan_write(
 
     let packet = from_raw_parts(packet, packet_size);
     (&*dan).write_buffer.send(packet.to_vec()).is_ok()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn dan_sent(dan: *const DanSocket) -> usize {
+    (&*dan).write_socket.sent()
 }

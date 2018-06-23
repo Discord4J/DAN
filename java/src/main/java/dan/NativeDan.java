@@ -17,6 +17,7 @@
 package dan;
 
 import com.sun.jna.Native;
+import com.sun.jna.NativeLong;
 import com.sun.jna.Pointer;
 
 import java.nio.ByteBuffer;
@@ -29,8 +30,10 @@ final class NativeDan {
     static native boolean dan_discover_ip(Pointer dan, ByteBuffer packet, int packetSize);
     static native boolean dan_reading(Pointer dan, int packetSize);
     static native boolean dan_read(Pointer dan, ByteBuffer packet, int packetSize);
+    static native NativeLong dan_received(Pointer dan);
     static native boolean dan_writing(Pointer dan, int packetTime);
     static native boolean dan_write(Pointer dan, ByteBuffer packet, int packetSize);
+    static native NativeLong dan_sent(Pointer dan);
 
     static {
         // "Name" varies by OS

@@ -56,11 +56,19 @@ public final class Dan implements AutoCloseable {
         return NativeDan.dan_read(dan, packet, packet.capacity());
     }
 
+    public long received() {
+        return NativeDan.dan_received(dan).longValue();
+    }
+
     public boolean writing(final int packetTime) {
         return NativeDan.dan_writing(dan, packetTime);
     }
 
     public boolean write(final ByteBuffer packet) {
         return NativeDan.dan_write(dan, packet, packet.capacity());
+    }
+
+    public long sent() {
+        return NativeDan.dan_sent(dan).longValue();
     }
 }
