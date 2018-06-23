@@ -25,14 +25,14 @@ import java.nio.ByteBuffer;
 @SuppressWarnings({"NativeMethod", "StaticMethodOnlyUsedInOneClass"})
 final class NativeDan {
 
-    static native Pointer dan_create(String bindingAddress, String connectionAddress, int socketTimeout);
+    static native Pointer dan_create(String bindingAddress, String connectionAddress, long socketTimeout);
     static native void dan_destroy(Pointer dan);
-    static native boolean dan_discover_ip(Pointer dan, ByteBuffer packet, int packetSize);
-    static native boolean dan_reading(Pointer dan, int packetSize);
-    static native boolean dan_read(Pointer dan, ByteBuffer packet, int packetSize);
+    static native boolean dan_discover_ip(Pointer dan, ByteBuffer packet, NativeLong packetSize);
+    static native boolean dan_reading(Pointer dan, NativeLong packetSize);
+    static native boolean dan_read(Pointer dan, ByteBuffer packet, NativeLong packetSize);
     static native NativeLong dan_received(Pointer dan);
-    static native boolean dan_writing(Pointer dan, int packetTime);
-    static native boolean dan_write(Pointer dan, ByteBuffer packet, int packetSize);
+    static native boolean dan_writing(Pointer dan, long packetTime);
+    static native boolean dan_write(Pointer dan, ByteBuffer packet, NativeLong packetSize);
     static native NativeLong dan_sent(Pointer dan);
 
     static {

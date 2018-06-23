@@ -14,7 +14,7 @@
 // along with DAN.  If not, see <http://www.gnu.org/licenses/>.
 use net::DanSocket;
 use std::ffi::CStr;
-use std::os::raw::{c_char, c_uchar, c_uint};
+use std::os::raw::{c_char, c_uchar, c_ulonglong};
 use std::ptr::null_mut;
 use std::slice::{from_raw_parts, from_raw_parts_mut};
 use std::time::Duration;
@@ -23,7 +23,7 @@ use std::time::Duration;
 pub unsafe extern "C" fn dan_create(
     binding_address: *const c_char,
     connection_address: *const c_char,
-    socket_timeout: c_uint,
+    socket_timeout: c_ulonglong,
 ) -> *mut DanSocket {
 
     let connection_address = CStr::from_ptr(connection_address);
@@ -46,7 +46,7 @@ pub unsafe extern "C" fn dan_create(
     }
 
     let socket_timeout = if socket_timeout != 0 {
-        Some(Duration::new(0, socket_timeout))
+        Some(Duration::from_nanos(socket_timeout))
     } else {
         None
     };
@@ -102,9 +102,9 @@ pub unsafe extern "C" fn dan_received(dan: *const DanSocket) -> usize {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn dan_writing(dan: *const DanSocket, packet_time: c_uint) -> bool {
+pub unsafe extern "C" fn dan_writing(dan: *const DanSocket, packet_time: c_ulonglong) -> bool {
     // Function may block until dan_destroy is invoked or an error writing occurs
-    (&*dan).write_socket.write(Duration::new(0, packet_time)).is_ok()
+    (&*dan).write_socket.write(Duration::from_nanos(packet_time)).is_ok()
 }
 
 #[no_mangle]

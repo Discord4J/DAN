@@ -16,6 +16,7 @@
  */
 package dan;
 
+import com.sun.jna.NativeLong;
 import com.sun.jna.Pointer;
 
 import java.net.InetSocketAddress;
@@ -31,7 +32,7 @@ public final class Dan implements AutoCloseable {
 
     private final Pointer dan;
 
-    public Dan(final InetSocketAddress binding, final InetSocketAddress connection, final int timeout) {
+    public Dan(final InetSocketAddress binding, final InetSocketAddress connection, final long timeout) {
         dan = NativeDan.dan_create(toAddressString(binding), toAddressString(connection), timeout);
 
         if (Objects.equals(Pointer.NULL, dan)) { // Rust code failed internally
@@ -45,27 +46,27 @@ public final class Dan implements AutoCloseable {
     }
 
     public boolean discoverIp(final ByteBuffer packet) {
-        return NativeDan.dan_discover_ip(dan, packet, packet.capacity());
+        return NativeDan.dan_discover_ip(dan, packet, new NativeLong(packet.capacity()));
     }
 
     public boolean reading(final int packetSize) {
-        return NativeDan.dan_reading(dan, packetSize);
+        return NativeDan.dan_reading(dan, new NativeLong(packetSize));
     }
 
     public boolean read(final ByteBuffer packet) {
-        return NativeDan.dan_read(dan, packet, packet.capacity());
+        return NativeDan.dan_read(dan, packet, new NativeLong(packet.capacity()));
     }
 
     public long received() {
         return NativeDan.dan_received(dan).longValue();
     }
 
-    public boolean writing(final int packetTime) {
+    public boolean writing(final long packetTime) {
         return NativeDan.dan_writing(dan, packetTime);
     }
 
     public boolean write(final ByteBuffer packet) {
-        return NativeDan.dan_write(dan, packet, packet.capacity());
+        return NativeDan.dan_write(dan, packet, new NativeLong(packet.capacity()));
     }
 
     public long sent() {
