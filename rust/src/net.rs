@@ -30,18 +30,18 @@ pub struct DanSharedSocket {
     socket: UdpSocket,
     address: SocketAddr,
     flags: AtomicUsize,
+    received: AtomicUsize,
+    sent: AtomicUsize,
 }
 
 pub struct DanReadSocket {
     shared_socket: Arc<DanSharedSocket>,
     read_buffer: Sender<Vec<u8>>,
-    received: AtomicUsize,
 }
 
 pub struct DanWriteSocket {
     shared_socket: Arc<DanSharedSocket>,
     write_buffer: Receiver<Vec<u8>>,
-    sent: AtomicUsize,
 }
 
 pub struct DanSocket {
@@ -78,18 +78,12 @@ impl DanReadSocket {
                     flags.fetch_and(!READING, Relaxed);
                     Error::new(ErrorKind::Other, error)
                 })?;
-
-                // Only accumulate if successful
-                self.received.fetch_add(1, Relaxed);
+                self.shared_socket.received.fetch_add(1, Relaxed);
             }
         }
 
         flags.fetch_and(!READING, Relaxed);
         Ok(())
-    }
-
-    pub fn received(&self) -> usize {
-        self.received.load(Relaxed)
     }
 }
 
@@ -116,18 +110,12 @@ impl DanWriteSocket {
                     error
                 })?;
                 time = Instant::now();
-
-                // Only accumulate if successful
-                self.sent.fetch_add(1, Relaxed);
+                self.shared_socket.sent.fetch_add(1, Relaxed);
             }
         }
 
         flags.fetch_and(!WRITING, Relaxed);
         Ok(())
-    }
-
-    pub fn sent(&self) -> usize {
-        self.sent.load(Relaxed)
     }
 }
 
@@ -144,16 +132,19 @@ impl DanSocket {
         let socket = UdpSocket::bind(binding_address.unwrap_or(wildcard_address))?;
         socket.set_read_timeout(Some(socket_timeout.unwrap_or(Duration::from_secs(1))))?;
 
-        let flags = AtomicUsize::new(READ | WRITE);
-        let socket = Arc::new(DanSharedSocket { socket, address: connection_address, flags });
+        let socket = Arc::new(DanSharedSocket {
+            socket,
+            address: connection_address,
+            flags: AtomicUsize::new(READ | WRITE),
+            received: ATOMIC_USIZE_INIT,
+            sent: ATOMIC_USIZE_INIT,
+        });
 
-        let received = ATOMIC_USIZE_INIT;
         let (read_buffer, receiver) = channel();
-        let read_socket = DanReadSocket { shared_socket: socket.clone(), read_buffer, received };
+        let read_socket = DanReadSocket { shared_socket: socket.clone(), read_buffer };
 
-        let sent = ATOMIC_USIZE_INIT;
         let (sender, write_buffer) = channel();
-        let write_socket = DanWriteSocket { shared_socket: socket.clone(), write_buffer, sent };
+        let write_socket = DanWriteSocket { shared_socket: socket.clone(), write_buffer };
 
         Ok(DanSocket {
             shared_socket: socket,
@@ -175,5 +166,13 @@ impl DanSocket {
         self.shared_socket.socket.send_to(packet, self.shared_socket.address)?;
         self.shared_socket.socket.recv_from(packet)?;
         Ok(())
+    }
+
+    pub fn received(&self) -> usize {
+        self.shared_socket.received.load(Relaxed)
+    }
+
+    pub fn sent(&self) -> usize {
+        self.shared_socket.sent.load(Relaxed)
     }
 }

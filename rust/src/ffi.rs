@@ -98,7 +98,7 @@ pub unsafe extern "C" fn dan_read(
 
 #[no_mangle]
 pub unsafe extern "C" fn dan_received(dan: *const DanSocket) -> usize {
-    (&*dan).read_socket.received()
+    (&*dan).received()
 }
 
 #[no_mangle]
@@ -120,5 +120,5 @@ pub unsafe extern "C" fn dan_write(
 
 #[no_mangle]
 pub unsafe extern "C" fn dan_sent(dan: *const DanSocket) -> usize {
-    (&*dan).write_socket.sent()
+    (&*dan).sent()
 }
